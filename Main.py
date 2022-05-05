@@ -9,23 +9,28 @@ import matplotlib.pyplot as plt
 
 
 def read_crime_file():
+    # makes dataframe from crime csv
     crime_df = pd.read_csv("BostonCrime.csv")
+    # makes datetime column into datetime datatype and changes column names for mapping, returns dataframe
     crime_df['OCCURRED_ON_DATE'] = pd.to_datetime(crime_df['OCCURRED_ON_DATE']).dt.date
     crime_df = crime_df.rename(columns={"Lat": "lat", "Long": "lon"})
     return crime_df
 
 
 def read_districts_file():
+    # returns districts dataframe
     return pd.read_csv("BostonDistricts.csv")
 
 
 def get_district_list(district_df):
+    # makes array of district names, returns as list
     districts = np.array(district_df['DISTRICT_NAME'])
     districts = districts.tolist()
     return districts
 
 
 def get_days_list(crime_df):
+    # makes array of days in dataframe, removes duplicate values, returns list of days
     days = np.array(crime_df['DAY_OF_WEEK'].values.tolist())
     return np.unique(days)
 
@@ -81,29 +86,37 @@ def analyze_district(crime_df, district_df, districts):
 def district_visualization(crime_df, district_df, districts):
     st.header(f"Breakdown of {len(crime_df.index):,} crimes by chosen districts")
     districts_dict = {}
+    # makes district list include all districts if none are selected using get_district_list function
     if len(districts) == 0:
         districts = get_district_list(district_df)
+    # filters dataframe for each district in list, finds length of filtered data and adds value to dictionary
     for district in districts:
         num = len(crime_df.loc[crime_df['DISTRICT'] == get_district_code(district, district_df)])
         districts_dict[district] = num
+    # turns dictionary into dataframe, renames column
     table_data = pd.DataFrame.from_dict(districts_dict, orient='index')
     table_data = table_data.rename(columns={0: 'Number of Crimes'})
+    # sorts dataframe by number of crimes value, streamlit table for presentation
     table_data = table_data.sort_values(by=['Number of Crimes'], ascending=False)
     st.table(table_data)
+    # plots pie chart with dict values as the values and the dict keys as the labels. adds color and formatting
     fig, ax = plt.subplots()
     plt.pie(districts_dict.values(), labels=districts_dict.keys(), autopct='%1.1f%%',
             colors=['#ff9999', '#66b3ff', '#99ff99', '#ffe5cc', '#ffff99', '#eeaaf2', '#cce5ff', '#ffcce5', '#99ff33',
                     '#99ffff', '#ffb266', '#e5ccff'])
     plt.axis('equal')
     plt.tight_layout()
-    plt.title("Distribution of Crimes")
+    # only shows pie chart of distribution if at least two districts are selected
     if len(districts) >= 2:
+        plt.title("Distribution of Crimes")
         st.pyplot(fig)
 
 
 def pie_shootings(crime_df):
+    # finds length of filtered dataframe where a shooting occurred or didnt, adds to dict
     shooting_dict = {'Shooting': len(crime_df.loc[crime_df['SHOOTING'] == 1]),
                      'No Shooting': len(crime_df.loc[crime_df['SHOOTING'] == 0])}
+    # pie chart using dict keys and values, added formatting and labels
     fig, ax = plt.subplots()
     plt.pie(shooting_dict.values(), labels=shooting_dict.keys(), autopct='%1.1f%%', explode=[.05, .05],
             shadow=True, colors=['#99ff99', '#eeaaf2'])
@@ -115,13 +128,13 @@ def pie_shootings(crime_df):
 
 
 def map_crimes(crime_df):
+    # removes datapoints without lat/lon data for graphing purposes, returns filtered dataframe
     crime_df = crime_df.loc[crime_df['lat'] != 0]
     return crime_df
 
 
 def graph_times(crime_df):
-    # for time in crime_df['HOUR']:
-    time_dict = {}
+    # histogram plot of hours data, sets bins, labels, and x ticks
     fig, ax = plt.subplots()
     crime_df = crime_df[['HOUR']]
     plt.hist(crime_df, bins=range(25), align='left', color='grey', edgecolor='lightblue')
@@ -135,12 +148,15 @@ def graph_times(crime_df):
 
 def graph_day(crime_df):
     day_dict = {}
+    # goes through each day, adds dict item for each day and how many crimes occurred where DAY_OF_WEEK value matches
     for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
         day_dict[day] = len(crime_df.loc[crime_df['DAY_OF_WEEK'] == day])
+    # makes keys and values into list, bar plots data
     days = list(day_dict.keys())
     values = list(day_dict.values())
     fig, ax = plt.subplots()
     plt.bar(days, values, color='grey')
+    # adds number labels to tops of bars
     for i in range(len(days)):
         plt.text(i, values[i], values[i], ha='center')
     plt.xlabel("Day of the Week")
@@ -153,8 +169,10 @@ def graph_day(crime_df):
 def main():
     st.title("Ryan's Boston Crime Streamlit Project")
     st.sidebar.write("What page would you like?")
+    # call functions to read dataframes
     crime_df = read_crime_file()
     district_df = read_districts_file()
+    # sidebar to select page to view. if statement used to populate page with 'select page' choice
     option = st.sidebar.radio("Select Page", ("District Analysis", "Time Analysis"))
     if option == 'District Analysis':
         # streamlit multiselect, uses get_district_list function for list of districts by name.
@@ -167,11 +185,13 @@ def main():
         st.header("Breakdown of crimes reported based off time of day")
         st.header(" ")
         st.write()
+        # calls graph times function, passes in crime dataframe
         graph_times(crime_df)
         st.header("Breakdown of crimes reported based off day of week")
         st.header(" ")
+        # calls graph day function, passes in crime dataframe
         graph_day(crime_df)
-        pass
+
 
 
 main()
